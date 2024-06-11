@@ -122,7 +122,8 @@ if __name__ == '__main__':
 
     p.add_argument("-f", "--file", type=argparse.FileType("wb"), help="output file name", required=True)
     p.add_argument("-i", "--input_device", type=int, help="input device index", required=False, default=None)
-    p.add_argument("-r", "--rate", type=int, help="sample frequency (Hz)", default=8000)
+    p.add_argument("-r", "--rate", type=int, help="sample frequency (Hz)", choices=[8000, 16000, 32000, 48000],
+                   default=8000)
     p.add_argument("-c", "--channels", type=int, help="num channels", default=1)
     p.add_argument("-q", "--sql_threshold", type=int, help="SQL threshold (dB)", default=-120)
     p.add_argument("-d", "--sql_duration", type=int, help="SQL closing time duration (ms)", default=300)
