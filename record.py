@@ -1,3 +1,5 @@
+import argparse
+import io
 import math
 import typing
 import wave
@@ -33,7 +35,7 @@ def log_print(x: typing.Any) -> None:
 
 
 def record(
-        file_out: str,
+        file_out: io.BufferedWriter,
         rate: int = 8000,
         format=pyaudio.paInt16,
         channels: int = 1,
@@ -48,13 +50,14 @@ def record(
     chunk_size = channels * rate * frame_duration // 1000
     sql_threshold = dB_to_percent(sql_threshold_db)
 
-    print(f"file_out: {file_out}\n"
-          f"rate: {rate}\n"
-          f"channels: {channels}\n"
-          f"frame_duration: {frame_duration}ms\n"
-          f"sql_duration: {sql_duration}\n"
-          f"sql_threshold_db: {sql_threshold_db} ({(sql_threshold * 100):.3f}%)\n"
-          f"chunk_size: {chunk_size}b")
+    print(f"File out: {file_out.name}\n"
+          f"Rate: {rate}\n"
+          f"Channels: {channels}\n"
+          f"Frame duration: {frame_duration}ms\n"
+          f"SQL duration: {sql_duration}\n"
+          f"SQL threshold dB: {sql_threshold_db} ({(sql_threshold * 100):.3f}%)\n"
+          f"Chunk size: {chunk_size}b\n\n"
+          f"Recording...")
 
     audio = pyaudio.PyAudio()
     vad = webrtcvad.Vad(vad_level)
@@ -104,14 +107,39 @@ def list_devices() -> None:
     p = pyaudio.PyAudio()
     devices = p.get_device_count()
 
+    print("Device list\n")
+
     for i in range(devices):
         dev = p.get_device_info_by_index(i)
 
-        if dev.get('maxInputChannels') > 0:
+        if dev.get("maxInputChannels") > 0:
             print(f"[{dev.get('index'):3}] {dev.get('name')} "
                   f"(channels: {dev.get('maxInputChannels')}, sample rate: {dev.get('defaultSampleRate')}Hz)")
 
 
 if __name__ == '__main__':
+    p = argparse.ArgumentParser(description="Python SQL/VAD recorder")
+
+    p.add_argument("-f", "--file", type=argparse.FileType("wb"), help="output file name", required=True)
+    p.add_argument("-i", "--input_device", type=int, help="input device index", required=False, default=None)
+    p.add_argument("-r", "--rate", type=int, help="sample frequency (Hz)", default=8000)
+    p.add_argument("-c", "--channels", type=int, help="num channels", default=1)
+    p.add_argument("-q", "--sql_threshold", type=int, help="SQL threshold (dB)", default=-120)
+    p.add_argument("-d", "--sql_duration", type=int, help="SQL closing time duration (ms)", default=300)
+    p.add_argument("-v", "--vad", type=bool, help="voice activity detector", default=False)
+
+    args = p.parse_args()
+
     list_devices()
-    record("sql.wav", sql_threshold_db=-24, use_vad=False, input_device_index=16)
+
+    print()
+
+    record(
+        file_out=args.file,
+        rate=args.rate,
+        channels=args.channels,
+        sql_threshold_db=args.sql_threshold,
+        sql_duration=args.sql_duration,
+        use_vad=args.vad,
+        input_device_index=args.input_device,
+    )
